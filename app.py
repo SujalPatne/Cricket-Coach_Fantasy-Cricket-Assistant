@@ -61,6 +61,14 @@ if 'user_input' not in st.session_state:
 # Flag to determine if we should use Gemini or the rule-based assistant
 if 'use_gemini' not in st.session_state:
     st.session_state['use_gemini'] = True
+    
+# Initialize user ID for tracking chat history
+if 'user_id' not in st.session_state:
+    import uuid
+    st.session_state['user_id'] = str(uuid.uuid4())
+    
+# Import data storage functions
+from data_storage import get_chat_history, export_chat_history_to_csv
 
 def get_text():
     """Get the user input text"""
@@ -88,6 +96,12 @@ def process_input():
                 output = generate_response(user_input)
         except Exception as e:
             output = f"I'm having trouble processing your request. Please try again. Error: {str(e)}"
+    
+    # Save to chat history in JSON file
+    from data_storage import save_chat_history
+    # Use session ID as user ID
+    user_id = st.session_state.get('user_id', 'anonymous')
+    save_chat_history(user_id, user_input, output)
     
     st.session_state.generated.append(output)
     st.rerun()
@@ -126,6 +140,24 @@ with model_col2:
     if gemini_toggle != st.session_state['use_gemini']:
         st.session_state['use_gemini'] = gemini_toggle
         st.rerun()
+
+# Chat history section in sidebar
+st.sidebar.markdown("### 📝 Chat History")
+if st.sidebar.button("Export Chat History"):
+    if export_chat_history_to_csv():
+        st.sidebar.success("Chat history exported to chat_history_export.csv")
+    else:
+        st.sidebar.error("Failed to export chat history")
+
+# Show recent conversations
+st.sidebar.markdown("#### Recent Conversations")
+recent_chats = get_chat_history(limit=5)
+if recent_chats:
+    for i, chat in enumerate(reversed(recent_chats)):
+        st.sidebar.markdown(f"**User**: {chat['user_message'][:30]}..." if len(chat['user_message']) > 30 else f"**User**: {chat['user_message']}")
+        st.sidebar.markdown(f"**Bot**: {chat['assistant_response'][:30]}..." if len(chat['assistant_response']) > 30 else f"**Bot**: {chat['assistant_response']}")
+        if i < len(recent_chats) - 1:
+            st.sidebar.markdown("---")
 
 # Container for chat history - this needs to be ABOVE the input container in the UI
 chat_container = st.container()

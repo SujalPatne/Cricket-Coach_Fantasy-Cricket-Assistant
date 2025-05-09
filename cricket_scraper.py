@@ -7,6 +7,13 @@ import os
 import time
 from datetime import datetime, timedelta
 
+# Import data storage module
+from data_storage import (
+    save_cricket_players, get_cricket_players,
+    save_match_data, get_match_data,
+    is_data_stale, PLAYERS_DATA_FILE, MATCH_DATA_FILE
+)
+
 # Cache for storing scraped data with timestamps
 data_cache = {
     "live_matches": {"data": None, "timestamp": 0},
@@ -98,9 +105,22 @@ def get_player_stats(player_name):
     """
     Get real stats for a cricket player by name
     """
+    # Check if we have stored player data
+    stored_players = get_cricket_players()
+    
+    # Try to find player in stored data first
+    if stored_players:
+        for player in stored_players:
+            if player.get('name', '').lower() == player_name.lower():
+                return player
+            
+            # Try partial match
+            if player_name.lower() in player.get('name', '').lower():
+                return player
+    
+    # If we need to fetch from web (either no stored data or player not found)
     try:
-        # This would typically scrape from a stats website
-        # For now, we're using a simplified approach
+        # Fetch from web
         search_content = get_website_text_content(f"https://www.espncricinfo.com/cricketers/search?term={player_name}")
         
         # Extract basic information from content
@@ -144,16 +164,44 @@ def get_player_stats(player_name):
                     
                     break
             
-            return player_info
+            # If we found player info, update stored data
+            if player_info and 'name' in player_info:
+                # Get existing player data
+                players_data = get_cricket_players()
+                
+                # Add this player if not already in the list
+                player_exists = False
+                for i, player in enumerate(players_data):
+                    if player.get('name', '') == player_info['name']:
+                        # Update existing player
+                        players_data[i] = {**player, **player_info}
+                        player_exists = True
+                        break
+                
+                if not player_exists:
+                    players_data.append(player_info)
+                
+                # Save updated player data
+                save_cricket_players(players_data)
+                
+                return player_info
     except Exception as e:
         print(f"Error fetching player stats: {str(e)}")
     
-    return None
+    # If all else fails, return data from cricket_data module
+    from cricket_data import get_player_stats as get_backup_player_stats
+    return get_backup_player_stats(player_name)
 
 def get_upcoming_matches():
     """
     Get information about upcoming cricket matches
     """
+    # Check if we can use stored data (if it's not stale)
+    if not is_data_stale(MATCH_DATA_FILE, 3600):  # 1 hour validity
+        stored_matches = get_match_data()
+        if stored_matches:
+            return stored_matches
+    
     # Check if cache is valid
     now = time.time()
     if data_cache["upcoming_matches"]["data"] and now - data_cache["upcoming_matches"]["timestamp"] < CACHE_VALIDITY:
@@ -198,21 +246,30 @@ def get_upcoming_matches():
         # Limit to 5 matches
         matches = matches[:5]
         
-        # Update cache
-        data_cache["upcoming_matches"]["data"] = matches
-        data_cache["upcoming_matches"]["timestamp"] = now
+        # Update cache and save to file
+        if matches:
+            data_cache["upcoming_matches"]["data"] = matches
+            data_cache["upcoming_matches"]["timestamp"] = now
+            save_match_data(matches)
         
         return matches
     except Exception as e:
         print(f"Error fetching upcoming matches: {str(e)}")
         
-        # Fallback data if web scraping fails
+        # Try to use stored data even if it's stale
+        stored_matches = get_match_data()
+        if stored_matches:
+            return stored_matches
+        
+        # Fallback data if web scraping fails and no stored data
         today = datetime.now()
         matches = [
             {"teams": "India vs Australia", "venue": "Mumbai", "date": today.strftime("%d %b")},
             {"teams": "England vs South Africa", "venue": "Chennai", "date": (today + timedelta(days=2)).strftime("%d %b")},
             {"teams": "New Zealand vs Pakistan", "venue": "Delhi", "date": (today + timedelta(days=5)).strftime("%d %b")}
         ]
+        # Save the fallback data too
+        save_match_data(matches)
         return matches
 
 def get_pitch_conditions(venue):
