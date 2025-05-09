@@ -72,8 +72,11 @@ from data_storage import get_chat_history, export_chat_history_to_csv
 
 def get_text():
     """Get the user input text"""
-    input_text = st.text_input("You: ", key="input", value=st.session_state['user_input'])
-    return input_text
+    return st.text_input("You: ", key="input_text", on_change=set_user_input)
+
+def set_user_input():
+    """Set the user input in session state when the input field changes"""
+    st.session_state['user_input'] = st.session_state.input_text
 
 def process_input():
     """Process the input and return a response"""
@@ -81,8 +84,11 @@ def process_input():
     if not user_input:
         return
         
+    # Clear the input field by resetting session state
+    st.session_state.input_text = ""
     st.session_state.user_input = ""
     
+    # Add user message to chat history
     st.session_state.past.append(user_input)
     
     # Show "typing" indicator
@@ -103,6 +109,7 @@ def process_input():
     user_id = st.session_state.get('user_id', 'anonymous')
     save_chat_history(user_id, user_input, output)
     
+    # Add assistant response to chat history
     st.session_state.generated.append(output)
     st.rerun()
 
@@ -183,20 +190,24 @@ with input_container:
 st.markdown("### Quick Actions")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    if st.button("Best Batsmen Today"):
-        st.session_state.user_input = "Recommend batsmen for today's match"
+    if st.button("Best Batsmen Today", key="btn_batsmen"):
+        st.session_state.input_text = "Recommend batsmen for today's match"
+        st.session_state.user_input = st.session_state.input_text
         process_input()
 with col2:
-    if st.button("Top Bowlers"):
-        st.session_state.user_input = "Who are the best bowlers to pick for fantasy cricket?"
+    if st.button("Top Bowlers", key="btn_bowlers"):
+        st.session_state.input_text = "Who are the best bowlers to pick for fantasy cricket?"
+        st.session_state.user_input = st.session_state.input_text
         process_input()
 with col3:
-    if st.button("Fantasy Rules"):
-        st.session_state.user_input = "Explain fantasy cricket rules"
+    if st.button("Fantasy Rules", key="btn_rules"):
+        st.session_state.input_text = "Explain fantasy cricket rules"
+        st.session_state.user_input = st.session_state.input_text
         process_input()
 with col4:
-    if st.button("Captain Picks"):
-        st.session_state.user_input = "Suggest captain and vice-captain"
+    if st.button("Captain Picks", key="btn_captain"):
+        st.session_state.input_text = "Suggest captain and vice-captain"
+        st.session_state.user_input = st.session_state.input_text
         process_input()
 
 # Footer
