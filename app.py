@@ -7,7 +7,22 @@ import os
 
 # Import modules for cricket data and assistant functionality
 from cricket_data import get_player_stats, get_recommended_players, get_player_form
-from cricket_scraper import get_live_cricket_matches, get_upcoming_matches, get_pitch_conditions
+# Use the improved cricket scraper for better data reliability
+import os
+import importlib
+
+# Try to use the improved cricket scraper if available
+try:
+    cricket_scraper_module = importlib.import_module('cricket_scraper_improved')
+    print("Using improved cricket scraper for better real-time data")
+    get_live_cricket_matches = cricket_scraper_module.get_live_cricket_matches
+    get_upcoming_matches = cricket_scraper_module.get_upcoming_matches
+    get_pitch_conditions = cricket_scraper_module.get_pitch_conditions
+except ImportError:
+    # Fall back to original if improved version doesn't exist
+    from cricket_scraper import get_live_cricket_matches, get_upcoming_matches, get_pitch_conditions
+    print("Using original cricket scraper")
+
 from assistant import generate_response, GREETING_MESSAGE
 from fantasy_rules import get_fantasy_rule_explanation
 from gemini_assistant import process_cricket_query
@@ -175,21 +190,24 @@ if recent_chats:
 # Container for chat history - this needs to be ABOVE the input container in the UI
 chat_container = st.container()
 
-# Display chat history with proper ordering
+# Display chat history in strict chronological order 
 with chat_container:
-    if st.session_state['generated']:
-        # Get the total number of messages
-        total_messages = len(st.session_state['generated'])
-        
-        # Display messages in chronological order
-        for i in range(total_messages):
-            # If there's a corresponding user message, show it first
-            if i < len(st.session_state['past']):
-                message(st.session_state['past'][i], is_user=True, key=f"user_{i}", avatar_style="thumbs")
-            
-            # Show the assistant response
-            if i < len(st.session_state['generated']):
-                message(st.session_state['generated'][i], key=f"bot_{i}", avatar_style="fun-emoji")
+    # Create a list of all messages in order
+    messages_in_order = []
+    
+    # Combine user and bot messages in strict chronological order
+    for i in range(max(len(st.session_state.past), len(st.session_state.generated))):
+        if i < len(st.session_state.past):
+            messages_in_order.append({"content": st.session_state.past[i], "is_user": True, "idx": i})
+        if i < len(st.session_state.generated):
+            messages_in_order.append({"content": st.session_state.generated[i], "is_user": False, "idx": i})
+    
+    # Display messages in order
+    for idx, msg in enumerate(messages_in_order):
+        if msg["is_user"]:
+            message(msg["content"], is_user=True, key=f"user_{msg['idx']}_{idx}", avatar_style="thumbs")
+        else:
+            message(msg["content"], key=f"bot_{msg['idx']}_{idx}", avatar_style="fun-emoji")
 
 # Container for text box
 input_container = st.container()
