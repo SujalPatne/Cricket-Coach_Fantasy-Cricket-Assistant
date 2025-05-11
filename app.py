@@ -175,25 +175,21 @@ if recent_chats:
 # Container for chat history - this needs to be ABOVE the input container in the UI
 chat_container = st.container()
 
-# Display chat history in pairs (user message followed by assistant response)
+# Display chat history with proper ordering
 with chat_container:
     if st.session_state['generated']:
-        # Creating a container for each message pair to ensure they stay together
-        message_pairs = []
+        # Get the total number of messages
+        total_messages = len(st.session_state['generated'])
         
-        # Create pairs of messages (user message + assistant response)
-        for i in range(len(st.session_state['generated'])):
-            if i == 0 and len(st.session_state['past']) == 0:
-                # Handle greeting message case
-                message_pairs.append((None, st.session_state['generated'][i]))
-            elif i < len(st.session_state['past']):
-                message_pairs.append((st.session_state['past'][i], st.session_state['generated'][i]))
-        
-        # Display each message pair
-        for i, (user_msg, assistant_msg) in enumerate(message_pairs):
-            if user_msg is not None:
-                message(user_msg, is_user=True, key=f"user_{i}", avatar_style="thumbs")
-            message(assistant_msg, key=f"bot_{i}", avatar_style="fun-emoji")
+        # Display messages in chronological order
+        for i in range(total_messages):
+            # If there's a corresponding user message, show it first
+            if i < len(st.session_state['past']):
+                message(st.session_state['past'][i], is_user=True, key=f"user_{i}", avatar_style="thumbs")
+            
+            # Show the assistant response
+            if i < len(st.session_state['generated']):
+                message(st.session_state['generated'][i], key=f"bot_{i}", avatar_style="fun-emoji")
 
 # Container for text box
 input_container = st.container()
@@ -216,26 +212,54 @@ with input_container:
 # Quick action buttons
 st.markdown("### Quick Actions")
 col1, col2, col3, col4 = st.columns(4)
+# Helper function to process quick action button clicks
+def handle_quick_action(query):
+    """Process a quick action button click with proper message ordering"""
+    # Add user message to chat history
+    st.session_state.past.append(query)
+    
+    # Show "typing" indicator
+    with st.spinner("⌛ The assistant is thinking..."):
+        try:
+            if st.session_state['use_gemini'] and os.environ.get("GEMINI_API_KEY"):
+                # Use Gemini for AI-powered responses
+                from gemini_assistant import process_cricket_query
+                output = process_cricket_query(query)
+            else:
+                # Fallback to rule-based responses
+                from assistant import generate_response
+                output = generate_response(query)
+        except Exception as e:
+            output = f"I'm having trouble processing your request. Please try again. Error: {str(e)}"
+    
+    # Save to chat history in JSON file
+    from data_storage import save_chat_history
+    # Use session ID as user ID
+    user_id = st.session_state.get('user_id', 'anonymous')
+    save_chat_history(user_id, query, output)
+    
+    # Add assistant response to chat history
+    st.session_state.generated.append(output)
+    
+    # Force a rerun to update the UI
+    st.rerun()
+
+# Quick action buttons
 with col1:
     if st.button("Best Batsmen Today", key="btn_batsmen"):
-        st.session_state.input_text = "Recommend batsmen for today's match"
-        st.session_state.user_input = st.session_state.input_text
-        process_input()
+        handle_quick_action("Recommend batsmen for today's match")
+        
 with col2:
     if st.button("Top Bowlers", key="btn_bowlers"):
-        st.session_state.input_text = "Who are the best bowlers to pick for fantasy cricket?"
-        st.session_state.user_input = st.session_state.input_text
-        process_input()
+        handle_quick_action("Who are the best bowlers to pick for fantasy cricket?")
+        
 with col3:
     if st.button("Fantasy Rules", key="btn_rules"):
-        st.session_state.input_text = "Explain fantasy cricket rules"
-        st.session_state.user_input = st.session_state.input_text
-        process_input()
+        handle_quick_action("Explain fantasy cricket rules")
+        
 with col4:
     if st.button("Captain Picks", key="btn_captain"):
-        st.session_state.input_text = "Suggest captain and vice-captain"
-        st.session_state.user_input = st.session_state.input_text
-        process_input()
+        handle_quick_action("Suggest captain and vice-captain")
 
 # Footer
 st.markdown("---")
