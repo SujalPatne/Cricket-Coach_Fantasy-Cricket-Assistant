@@ -90,8 +90,8 @@ def process_input():
     if not user_input:
         return
         
-    # Clear the input field by resetting session state
-    st.session_state.input_text = ""
+    # Reset user_input but NOT input_text as that would cause an error
+    # since we can't modify widget values after creation
     st.session_state.user_input = ""
     
     # Add user message to chat history
