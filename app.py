@@ -72,11 +72,10 @@ from data_storage import get_chat_history, export_chat_history_to_csv
 
 def get_text():
     """Get the user input text"""
-    # Add on_change handling
+    # Simple text input without callbacks when used in a form
     return st.text_input(
         "You: ", 
-        key="input_text", 
-        on_change=set_user_input
+        key="input_text"
     )
 
 def set_user_input():
@@ -206,8 +205,13 @@ with input_container:
         submit_button = st.form_submit_button("Send")
         
     # Process when the form is submitted (either by button or Enter key)
-    if submit_button and st.session_state.user_input:
-        process_input()
+    if submit_button:
+        # Update session state with the current input
+        st.session_state['user_input'] = st.session_state.input_text
+        
+        # Only process if there's actual input
+        if st.session_state.user_input.strip():
+            process_input()
 
 # Quick action buttons
 st.markdown("### Quick Actions")
