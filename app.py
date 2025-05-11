@@ -72,11 +72,18 @@ from data_storage import get_chat_history, export_chat_history_to_csv
 
 def get_text():
     """Get the user input text"""
-    return st.text_input("You: ", key="input_text", on_change=set_user_input)
+    # Add on_change handling
+    return st.text_input(
+        "You: ", 
+        key="input_text", 
+        on_change=set_user_input
+    )
 
 def set_user_input():
     """Set the user input in session state when the input field changes"""
     st.session_state['user_input'] = st.session_state.input_text
+
+# Function removed as we're using st.form for Enter key handling
 
 def process_input():
     """Process the input and return a response"""
@@ -169,22 +176,38 @@ if recent_chats:
 # Container for chat history - this needs to be ABOVE the input container in the UI
 chat_container = st.container()
 
-# Display chat history
+# Display chat history in pairs (user message followed by assistant response)
 with chat_container:
     if st.session_state['generated']:
+        # Creating a container for each message pair to ensure they stay together
+        message_pairs = []
+        
+        # Create pairs of messages (user message + assistant response)
         for i in range(len(st.session_state['generated'])):
-            if i < len(st.session_state['past']):
-                message(st.session_state['past'][i], is_user=True, key=f"user_{i}", avatar_style="thumbs")
-            message(st.session_state['generated'][i], key=f"bot_{i}", avatar_style="fun-emoji")
+            if i == 0 and len(st.session_state['past']) == 0:
+                # Handle greeting message case
+                message_pairs.append((None, st.session_state['generated'][i]))
+            elif i < len(st.session_state['past']):
+                message_pairs.append((st.session_state['past'][i], st.session_state['generated'][i]))
+        
+        # Display each message pair
+        for i, (user_msg, assistant_msg) in enumerate(message_pairs):
+            if user_msg is not None:
+                message(user_msg, is_user=True, key=f"user_{i}", avatar_style="thumbs")
+            message(assistant_msg, key=f"bot_{i}", avatar_style="fun-emoji")
 
 # Container for text box
 input_container = st.container()
 
 with input_container:
-    user_input = get_text()
-    col1, col2 = st.columns([0.85, 0.15])
-    with col2:
-        submit_button = st.button("Send", on_click=process_input)
+    # Create a form to handle 'Enter' key submission
+    with st.form(key="message_form", clear_on_submit=True):
+        user_input = get_text()
+        submit_button = st.form_submit_button("Send")
+        
+    # Process when the form is submitted (either by button or Enter key)
+    if submit_button and st.session_state.user_input:
+        process_input()
 
 # Quick action buttons
 st.markdown("### Quick Actions")

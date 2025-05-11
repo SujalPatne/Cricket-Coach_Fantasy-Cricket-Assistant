@@ -27,16 +27,43 @@ CACHE_VALIDITY = 600
 
 def get_website_text_content(url):
     """
-    Extract main text content from a website using trafilatura
+    Extract main text content from a website using trafilatura with improved reliability
     """
     try:
-        downloaded = trafilatura.fetch_url(url)
-        if downloaded:
-            text = trafilatura.extract(downloaded)
+        # Set a reasonable timeout and use a common browser user agent
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        
+        # Try to fetch with requests first
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Use trafilatura to extract content
+        text = trafilatura.extract(response.text)
+        if text:
             return text
-        return "Could not download content"
+            
+        # If trafilatura fails, try BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.extract()
+        
+        # Get text
+        text = soup.get_text()
+        # Break into lines and remove leading and trailing space on each
+        lines = (line.strip() for line in text.splitlines())
+        # Break multi-headlines into a line each
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        # Remove blank lines
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        return text
+        
     except Exception as e:
-        return f"Error extracting content: {str(e)}"
+        print(f"Error extracting content from {url}: {str(e)}")
+        return "Could not download content"
 
 def fetch_with_beautiful_soup(url):
     """
@@ -55,31 +82,59 @@ def fetch_with_beautiful_soup(url):
 
 def get_live_cricket_matches():
     """
-    Get information about currently live cricket matches
+    Get information about currently live cricket matches with improved reliability
     """
     # Check if cache is valid
     now = time.time()
     if data_cache["live_matches"]["data"] and now - data_cache["live_matches"]["timestamp"] < CACHE_VALIDITY:
         return data_cache["live_matches"]["data"]
     
-    try:
-        # Fallback to text extraction if needed
-        content = get_website_text_content("https://www.espncricinfo.com/live-cricket-score")
-        
-        # Process the content to extract match information
-        matches = []
-        if content:
+    # Try multiple cricket data sources for better reliability
+    urls = [
+        "https://www.espncricinfo.com/live-cricket-score",
+        "https://www.cricbuzz.com/cricket-match/live-scores",
+        "https://www.icc-cricket.com/live-matches"
+    ]
+    
+    matches = []
+    
+    for url in urls:
+        try:
+            print(f"Trying to fetch live matches from: {url}")
+            content = get_website_text_content(url)
+            
+            if not content or content == "Could not download content":
+                print(f"Failed to get content from {url}, trying next source...")
+                continue
+            
+            # Process the content to extract match information
             lines = content.split('\n')
             match_info = {}
             
             for line in lines:
-                if re.search(r'vs', line) and len(line) < 100:  # Likely a team vs team line
+                # Extract team names (more robust pattern matching)
+                if (re.search(r'\bvs\b|\bv\b', line) and len(line) < 100 and 
+                    any(team in line for team in ["India", "Australia", "England", "Pakistan", 
+                                                  "New Zealand", "South Africa", "West Indies", 
+                                                  "Sri Lanka", "Bangladesh", "Afghanistan"])):
+                    
                     if match_info and 'teams' in match_info:  # Save previous match
                         matches.append(match_info)
                     match_info = {'teams': line.strip()}
-                elif match_info and 'teams' in match_info and not 'status' in match_info and re.search(r'innings|overs|wicket|run|batting', line.lower()):
+                    
+                # Extract match status
+                elif (match_info and 'teams' in match_info and 
+                      not 'status' in match_info and 
+                      re.search(r'innings|overs|wicket|run|batting|score|chase|target|need|won|lost|draw|tie', line.lower())):
                     match_info['status'] = line.strip()
-                elif match_info and 'teams' in match_info and 'status' in match_info and not 'venue' in match_info and len(line.strip()) > 5:
+                    
+                # Extract venue information
+                elif (match_info and 'teams' in match_info and 
+                      'status' in match_info and 
+                      not 'venue' in match_info and 
+                      (re.search(r'stadium|ground|oval|field|park', line.lower()) or 
+                       any(venue in line for venue in ["Mumbai", "Chennai", "Kolkata", "Delhi", 
+                                                        "Bangalore", "Hyderabad", "Ahmedabad", "Pune"]))):
                     match_info['venue'] = line.strip()
                     matches.append(match_info)
                     match_info = {}
@@ -87,19 +142,42 @@ def get_live_cricket_matches():
             # Add the last match if not added
             if match_info and 'teams' in match_info:
                 matches.append(match_info)
+                
+            # If we found matches from this source, stop trying others
+            if matches:
+                print(f"Successfully found {len(matches)} matches from {url}")
+                break
+                
+        except Exception as e:
+            print(f"Error fetching live matches from {url}: {str(e)}")
+    
+    # Clean up match information for consistency
+    for match in matches:
+        # Clean up team names
+        if 'teams' in match:
+            match['teams'] = re.sub(r'\s+', ' ', match['teams']).strip()
         
-        # Limit to 5 matches
-        matches = matches[:5]
-        
-        # Update cache
-        data_cache["live_matches"]["data"] = matches
-        data_cache["live_matches"]["timestamp"] = now
-        
-        return matches
-    except Exception as e:
-        print(f"Error fetching live matches: {str(e)}")
-        # Return empty list as fallback
-        return []
+        # Ensure status field exists with at least something
+        if 'status' not in match:
+            match['status'] = "Live match"
+            
+        # Ensure venue field exists
+        if 'venue' not in match:
+            match['venue'] = "Venue information unavailable"
+    
+    # Limit to 5 matches and update cache
+    matches = matches[:5]
+    data_cache["live_matches"]["data"] = matches
+    data_cache["live_matches"]["timestamp"] = now
+    
+    # If we still don't have matches, check if we can use stored match data
+    if not matches:
+        stored_matches = get_match_data()
+        if stored_matches:
+            print("Using stored match data as fallback")
+            return stored_matches
+    
+    return matches
 
 def get_player_stats(player_name):
     """
