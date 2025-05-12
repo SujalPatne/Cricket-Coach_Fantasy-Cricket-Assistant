@@ -1,0 +1,17 @@
+streamlit>=1.45.0
+streamlit-chat>=0.1.1
+pandas>=2.2.3
+trafilatura>=2.0.0
+requests>=2.32.3
+beautifulsoup4>=4.13.4
+google-generativeai>=0.8.5
+sqlalchemy>=2.0.40
+psycopg2-binary>=2.9.10
+openai>=1.78.0
+matplotlib>=3.7.1
+seaborn>=0.12.2
+bcrypt>=4.0.1
+pytest>=7.3.1
+pytest-cov>=4.1.0
+python-dotenv>=1.0.0
+requests-cache>=1.1.0

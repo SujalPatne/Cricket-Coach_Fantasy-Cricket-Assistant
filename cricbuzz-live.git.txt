@@ -1,0 +1,1519 @@
+Directory structure:
+└── ekamid-cricbuzz-live.git/
+    ├── README.md
+    ├── LICENSE
+    ├── package.json
+    ├── vercel.json
+    ├── .env.example
+    ├── public/
+    │   └── docs/
+    │       └── swagger.json
+    └── src/
+        ├── index.js
+        ├── config/
+        │   ├── app.js
+        │   └── env.js
+        ├── controllers/
+        │   └── match.controller.js
+        ├── core/
+        │   ├── constants/
+        │   │   └── index.js
+        │   ├── modules/
+        │   │   ├── getRoutes.js
+        │   │   └── httpHandle.js
+        │   ├── response/
+        │   │   ├── errorResponse.js
+        │   │   └── httpResponse.js
+        │   └── utils/
+        │       └── formatter.js
+        ├── middlewares/
+        │   ├── expressRateLimit.js
+        │   └── expressUserAgent.js
+        ├── routes/
+        │   ├── index.js
+        │   └── v1.js
+        └── services/
+            ├── fetchMatchData.js
+            └── .gitkeep
+
+================================================
+FILE: README.md
+================================================
+# Cricbuzz Live API Documentation
+
+## Introduction
+
+Greetings to the documentation of the unofficial Cricbuzz Live data fetching API (data sourced through scraping). This API furnishes details about live, recent, and upcoming cricket matches. Seamlessly integrate match scores, specifics, and summaries into your cricket data applications.
+
+## Base URL
+
+The base URL for the API is `https://cricbuzz-live.vercel.app`. All endpoints are relative to this base URL.
+
+## Endpoints
+
+### 1. Get Match Score
+
+#### Endpoint: `/v1/score/{matchId}`
+
+- **Method:** GET
+- **Summary:** Get detailed information about a specific match score.
+- **Parameters:**
+  - `matchId` (path parameter): The ID of the match (integer).
+- **Response:**
+  - `200 OK`: Successful response with match details.
+    - `message`: "Matches data successfully retrieved"
+    - `data`: Detailed information about the match, including title, update, live score, and player statistics.
+
+#### Example Request:
+
+```bash
+curl -X GET "https://cricbuzz-live.vercel.app/v1/score/12345"
+```
+
+#### Example Response:
+
+```json
+{
+  "message": "Matches data successfully retrieved",
+  "data": {
+    "title": "MI Emirates vs Gulf Giants, 4th Match - Live Cricket Score",
+    "update": "Gulf Giants need 25 runs in 10 balls",
+    "liveScore": "GG 155/5 (18.2)",
+    "runRate": "{{suggest.tag}}",
+    "batsmanOne": "Karim Janat",
+    "batsmanOneRun": "0",
+    "batsmanOneBall": "(0)",
+    "batsmanOneSR": "0",
+    "batsmanTwo": "Shimron Hetmyer",
+    "batsmanTwoRun": "15",
+    "batsmanTwoBall": "(16)",
+    "batsmanTwoSR": "93.75",
+    "bowlerOne": "Fazalhaq Farooqi",
+    "bowlerOneOver": "15",
+    "bowlerOneRun": "16",
+    "bowlerOneWickets": "0",
+    "bowlerOneEconomy": "93.75",
+    "bowlerTwo": "Trent Boult",
+    "bowlerTwoOver": "O",
+    "bowlerTwoRun": "R",
+    "bowlerTwoWicket": "W",
+    "bowlerTwoEconomy": "ECO"
+  }
+}
+```
+
+### 2. Get Live Matches
+
+#### Endpoint: `/v1/matches/live`
+
+- **Method:** GET
+- **Summary:** Get a list of live cricket matches.
+- **Parameters:**
+  - `type` (query parameter): The type of matches (international(default), league, domestic, women).
+- **Response:**
+  - `200 OK`: Successful response with live match details.
+    - `message`: "Matches data successfully retrieved"
+    - `data`: List of live matches with match ID, title, teams, time and place, and overview.
+
+#### Example Request:
+
+```bash
+curl -X GET "https://cricbuzz-live.vercel.app/v1/matches/live?type=international"
+```
+
+#### Example Response:
+
+```json
+{
+  "message": "Matches data successfully retrieved",
+  "data": {
+    "matches": [
+      {
+        "id": "86529",
+        "title": "Sri Lanka U19 vs Zimbabwe U19,",
+        "teams": [
+          {
+            "team": "SLU1..",
+            "run": "204 (48.3 Ovs)"
+          },
+          {
+            "team": "ZIMU..",
+            "run": "204 (48.3 Ovs)"
+          }
+        ],
+        "timeAndPlace": {
+          "date": "Today",
+          "time": "&nbsp;•&nbsp;",
+          "place": "at Kimberley, Diamond Oval"
+        },
+        "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+      }
+    ]
+  }
+}
+```
+
+### 3. Get Recent Matches
+
+#### Endpoint: `/v1/matches/recent`
+
+- **Method:** GET
+- **Summary:** Get a list of recent cricket matches.
+- **Parameters:**
+  - `type` (query parameter): The type of matches (international(default), league, domestic, women).
+- **Response:**
+  - `200 OK`: Successful response with recent match details.
+    - `message`: "Matches data successfully retrieved"
+    - `data`: List of recent matches with match ID, title, teams, time and place, and overview.
+
+#### Example Request:
+
+```bash
+curl -X GET "https://cricbuzz-live.vercel.app/v1/matches/recent?type=league"
+```
+
+#### Example Response:
+
+```json
+{
+  "message": "Matches data successfully retrieved",
+  "data": {
+    "matches": [
+      {
+        "id": "86529",
+        "title": "Sri Lanka U19 vs Zimbabwe U19,",
+        "teams": [
+          {
+            "team": "SLU1..",
+            "run": "204 (48.3 Ovs)"
+          },
+          {
+            "team": "ZIMU..",
+            "run": "204 (48.3 Ovs)"
+          }
+        ],
+        "timeAndPlace": {
+          "date": "Today",
+          "time": "&nbsp;•&nbsp;",
+          "place": "at Kimberley, Diamond Oval"
+        },
+        "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+      }
+    ]
+  }
+}
+```
+
+### 4. Get Upcoming Matches
+
+#### Endpoint: `/v1/matches/upcoming`
+
+- **Method:** GET
+- **Summary:** Get a list of upcoming cricket matches.
+- **Parameters:**
+  - `type` (query parameter): The type of matches (international(default), league, domestic, women).
+- **Response:**
+  - `200 OK`: Successful response with upcoming match details.
+    - `message`: "Matches data successfully retrieved"
+    - `data`: List of upcoming matches with match ID, title, teams, time and place, and overview.
+
+#### Example Request:
+
+```bash
+curl -X GET "https://cricbuzz-live.vercel.app/v1/matches/upcoming?type=women"
+```
+
+#### Example Response:
+
+```json
+{
+  "message": "Matches data successfully retrieved",
+  "data": {
+    "matches": [
+      {
+        "id": "86529",
+        "title": "Sri Lanka U19 vs Zimbabwe U19,",
+        "teams": [
+          {
+            "team": "SLU1..",
+            "run": "204 (48.3 Ovs)"
+          },
+          {
+            "team": "ZIMU..",
+            "run": "204 (48.3 Ovs)"
+          }
+        ],
+        "timeAndPlace": {
+          "date": "Today",
+          "time": "&nbsp;•&nbsp;",
+          "place": "at Kimberley, Diamond Oval"
+        },
+        "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+      }
+    ]
+  }
+}
+```
+
+
+
+
+================================================
+FILE: LICENSE
+================================================
+MIT License
+
+Copyright (c) 2024 Ebrahim Khalil
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+================================================
+FILE: package.json
+================================================
+{
+  "name": "cricbuzz-live",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ekamid"
+  },
+  "keywords": [
+    "cricbuzz",
+    "scrapper",
+    "cheerio",
+    "cricbuzz",
+    "scrapper",
+    "nodejs",
+    "express"
+  ],
+  "author": "Ebrahim Khalil",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.5",
+    "cheerio": "^1.0.0-rc.12",
+    "colorette": "^2.0.20",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.2",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^7.1.5",
+    "express-useragent": "^1.0.15",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "prettier": "^3.2.4",
+    "request-ip": "^3.3.0",
+    "swagger-ui-express": "^5.0.0",
+    "uuid": "^9.0.1"
+  }
+}
+
+
+
+================================================
+FILE: vercel.json
+================================================
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "src/index.js",
+            "use": "@now/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "src/index.js"
+        }
+    ]
+}
+
+
+================================================
+FILE: .env.example
+================================================
+# Application
+NODE_ENV=development
+APP_KEY=your_app_key
+APP_NAME=cricbuzz-live
+APP_LANG=id
+APP_PORT=8000
+
+# Config
+AXIOS_TIMEOUT=5m
+RATE_LIMIT=100
+RATE_DELAY=5m
+
+# Secret Env
+# Add any additional secret environment variables here
+
+# Base URL Env
+APP_BASE_URL=http://localhost:8000
+
+# Third Party Env
+# Add any additional third-party environment variables here
+
+
+
+================================================
+FILE: public/docs/swagger.json
+================================================
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Cricbuzz Live",
+        "version": "1.0.0",
+        "description": "Documentation for your Cricbuzz live data fetching API"
+    },
+    "paths": {
+        "/v1/score/{matchId}": {
+            "get": {
+                "summary": "Get match score",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "matchId",
+                        "required": true,
+                        "description": "The ID of the match",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Matches data successfully retrieved",
+                                    "data": {
+                                        "title": "MI Emirates vs Gulf Giants, 4th Match - Live Cricket Score",
+                                        "update": "Gulf Giants need 25 runs in 10 balls",
+                                        "liveScore": "GG 155/5 (18.2)",
+                                        "runRate": "{{suggest.tag}}",
+                                        "batsmanOne": "Karim Janat",
+                                        "batsmanOneRun": "0",
+                                        "batsmanOneBall": "(0)",
+                                        "batsmanOneSR": "0",
+                                        "batsmanTwo": "Shimron Hetmyer",
+                                        "batsmanTwoRun": "15",
+                                        "batsmanTwoBall": "(16)",
+                                        "batsmanTwoSR": "93.75",
+                                        "bowlerOne": "Fazalhaq Farooqi",
+                                        "bowlerOneOver": "15",
+                                        "bowlerOneRun": "16",
+                                        "bowlerOneWickets": "0",
+                                        "bowlerOneEconomy": "93.75",
+                                        "bowlerTwo": "Trent Boult",
+                                        "bowlerTwoOver": "O",
+                                        "bowlerTwoRun": "R",
+                                        "bowlerTwoWicket": "W",
+                                        "bowlerTwoEconomy": "ECO"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/matches/live": {
+            "get": {
+                "summary": "Get live matches",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "description": "The type of matches (international(default), league, domestic, women)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Matches data successfully retrieved",
+                                    "data": {
+                                        "matches": [
+                                            {
+                                                "id": "86529",
+                                                "title": "Sri Lanka U19 vs Zimbabwe U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "SLU1..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "ZIMU..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at Kimberley, Diamond Oval"
+                                                },
+                                                "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+                                            },
+                                            {
+                                                "id": "86536",
+                                                "title": "New Zealand U19 vs Nepal U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "NZU1..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "NPLU..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at East London, Buffalo Park"
+                                                },
+                                                "overview": "New Zealand U19 won by 64 runs"
+                                            },
+                                            {
+                                                "id": "74198",
+                                                "title": "Jharkhand vs Services,",
+                                                "teams": [
+                                                    {
+                                                        "team": "JHKD",
+                                                        "run": "316"
+                                                    },
+                                                    {
+                                                        "team": "SER",
+                                                        "run": "316"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "-",
+                                                    "place": "at Delhi, Palam A Stadium"
+                                                },
+                                                "overview": "Day 3: Stumps - Services trail by 1 run"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/matches/recent": {
+            "get": {
+                "summary": "Get recent matches",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "description": "The type of matches (international(default), league, domestic, women)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Matches data successfully retrieved",
+                                    "data": {
+                                        "matches": [
+                                            {
+                                                "id": "86529",
+                                                "title": "Sri Lanka U19 vs Zimbabwe U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "SLU1..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "ZIMU..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at Kimberley, Diamond Oval"
+                                                },
+                                                "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+                                            },
+                                            {
+                                                "id": "86536",
+                                                "title": "New Zealand U19 vs Nepal U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "NZU1..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "NPLU..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at East London, Buffalo Park"
+                                                },
+                                                "overview": "New Zealand U19 won by 64 runs"
+                                            },
+                                            {
+                                                "id": "74198",
+                                                "title": "Jharkhand vs Services,",
+                                                "teams": [
+                                                    {
+                                                        "team": "JHKD",
+                                                        "run": "316"
+                                                    },
+                                                    {
+                                                        "team": "SER",
+                                                        "run": "316"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "-",
+                                                    "place": "at Delhi, Palam A Stadium"
+                                                },
+                                                "overview": "Day 3: Stumps - Services trail by 1 run"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/matches/upcoming": {
+            "get": {
+                "summary": "Get upcoming matches",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "description": "The type of matches (international(default), league, domestic, women)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Matches data successfully retrieved",
+                                    "data": {
+                                        "matches": [
+                                            {
+                                                "id": "86529",
+                                                "title": "Sri Lanka U19 vs Zimbabwe U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "SLU1..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "ZIMU..",
+                                                        "run": "204 (48.3 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at Kimberley, Diamond Oval"
+                                                },
+                                                "overview": "Sri Lanka U19 won by 39 runs (DLS method)"
+                                            },
+                                            {
+                                                "id": "86536",
+                                                "title": "New Zealand U19 vs Nepal U19,",
+                                                "teams": [
+                                                    {
+                                                        "team": "NZU1..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    },
+                                                    {
+                                                        "team": "NPLU..",
+                                                        "run": "302-8 (50 Ovs)"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "&nbsp;•&nbsp;",
+                                                    "place": "at East London, Buffalo Park"
+                                                },
+                                                "overview": "New Zealand U19 won by 64 runs"
+                                            },
+                                            {
+                                                "id": "74198",
+                                                "title": "Jharkhand vs Services,",
+                                                "teams": [
+                                                    {
+                                                        "team": "JHKD",
+                                                        "run": "316"
+                                                    },
+                                                    {
+                                                        "team": "SER",
+                                                        "run": "316"
+                                                    }
+                                                ],
+                                                "timeAndPlace": {
+                                                    "date": "Today",
+                                                    "time": "-",
+                                                    "place": "at Delhi, Palam A Stadium"
+                                                },
+                                                "overview": "Day 3: Stumps - Services trail by 1 run"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+================================================
+FILE: src/index.js
+================================================
+const http = require('http');
+const { App } = require('./config/app');
+const { env } = require('./config/env');
+const { httpHandle } = require('./core/modules/httpHandle');
+
+function bootstrap() {
+    const port = env.APP_PORT;
+
+    // create express app
+    const app = new App().create();
+
+    const server = http.createServer(app);
+
+    // http handle
+    const { onError, onListening } = httpHandle(server, port);
+
+    // run server listen
+    server.listen(port);
+    server.on('error', onError);
+    server.on('listening', onListening);
+}
+
+bootstrap();
+
+
+
+================================================
+FILE: src/config/app.js
+================================================
+const express = require('express');
+const cors = require('cors');
+const userAgent = require('express-useragent');
+const helmet = require('helmet');
+const hpp = require('hpp');
+const path = require('path');
+const requestIp = require('request-ip');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../../public/docs/swagger.json');
+const { expressRateLimit } = require('../middlewares/expressRateLimit');
+const { expressUserAgent } = require('../middlewares/expressUserAgent');
+const HttpResponse = require('../core/response/httpResponse');
+
+// const { optionsSwaggerUI, swaggerSpec } = require('~/core/modules/docsSwagger');
+const indexRoutes = require('../routes');
+const { env } = require('./env');
+const { NotFound } = require('../core/response/errorResponse');
+
+/**
+ * Initialize Bootsrap Application
+ */
+class App {
+    constructor() {
+        this._app = express();
+        this._port = env.APP_PORT;
+
+        this._plugins();
+        this._swagger();
+        this._routes();
+    }
+
+    /**
+     * Initialize Plugins
+     */
+    _plugins() {
+        this._app.use(helmet());
+        this._app.use(cors());
+        this._app.use(express.json({ limit: '200mb', type: 'application/json' }));
+        this._app.use(express.urlencoded({ extended: true }));
+        this._app.use(express.static(path.resolve(`${__dirname}/../../public`)));
+        this._app.use(hpp());
+        this._app.use(requestIp.mw());
+        this._app.use(userAgent.express());
+
+        // middleware
+        this._app.use(expressRateLimit());
+        this._app.use(expressUserAgent());
+    }
+
+    /**
+    * Initialize Swagger
+    */
+    _swagger() {
+        this._app.use('/v1/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    }
+
+    /**
+     * Initialize Routes
+     */
+    _routes() {
+        this._app.use(indexRoutes);
+
+        // Catch error 404 endpoint not found
+        this._app.use('*', function (req, _res) {
+            const method = req.method;
+            const url = req.originalUrl;
+            const host = req.hostname;
+
+            const endpoint = `${host}${url}`;
+
+            throw new NotFound(
+                `Sorry, the ${endpoint} HTTP method ${method} resource you are looking for was not found.`
+            );
+        });
+    }
+
+    /**
+     * Create Bootstrap App
+     */
+    create() {
+
+        // set port
+        this._app.set('port', this._port);
+
+        // return this application
+        return this._app;
+    }
+}
+
+module.exports = { App };
+
+
+
+================================================
+FILE: src/config/env.js
+================================================
+require('dotenv/config');
+
+/**
+ * @param {any} value
+ * @param {any} fallback
+ * @returns {any}
+ */
+function getEnv(value, fallback) {
+    const result = process.env[value];
+
+    // check env value
+    if ([undefined, null, ''].includes(result)) {
+        // check fallback
+        if (fallback) {
+            return fallback;
+        }
+
+        return undefined;
+    }
+
+    return result;
+}
+
+/**
+ * App Env
+ */
+const appEnv = {
+    // Application
+    NODE_ENV: getEnv('NODE_ENV', 'development'),
+
+    APP_KEY: getEnv('APP_KEY'),
+    APP_NAME: getEnv('APP_NAME', 'cricbuzz-live'),
+    APP_LANG: getEnv('APP_LANG', 'id'),
+    APP_PORT: Number(getEnv('APP_PORT', 8000)),
+
+    // Config
+    AXIOS_TIMEOUT: getEnv('AXIOS_TIMEOUT', '5m'),
+    RATE_LIMIT: Number(getEnv('RATE_LIMIT', 100)),
+    RATE_DELAY: getEnv('RATE_DELAY', '5m'),
+};
+
+/**
+ * Secret Env
+ */
+const secretEnv = {
+
+
+};
+
+/**
+ * Base URL Env
+ */
+const baseURLEnv = {
+    APP_BASE_URL: getEnv(
+        'APP_BASE_URL',
+        'http://localhost:8000'
+    ),
+};
+
+
+/**
+ * Third Party Env
+ */
+const thirdPartyEnv = {
+
+};
+
+const env = {
+    ...appEnv,
+    ...secretEnv,
+    ...baseURLEnv,
+    ...thirdPartyEnv,
+};
+
+module.exports = { env };
+
+
+
+================================================
+FILE: src/controllers/match.controller.js
+================================================
+
+const asyncHandler = require("express-async-handler");
+const route = require('../routes/v1');
+const HttpResponse = require('../core/response/httpResponse');
+const { fetchScore, fetchMatches } = require("../services/fetchMatchData");
+
+/**
+ * match id is a number
+ */
+
+route.get(
+    '/score/:matchId',
+    asyncHandler(async function getMatches(req, res) {
+
+        try {
+            const { matchId } = req.params;
+
+            const score = await fetchScore(matchId)
+
+            const httpResponse = HttpResponse.get({ message: "Matches data successfull retrived", data: score });
+            res.status(200).json(httpResponse);
+        } catch (error) {
+            console.error(error)
+        }
+    })
+);
+
+
+/**
+ * 4 types of matches
+ * international, league, domestic, women
+ * if type not given, default match type is 'international'
+ */
+
+
+function createMatchesRoute(path, endpoint) {
+    try {
+        route.get(
+            path,
+            asyncHandler(async function getMatches(req, res) {
+                const type = req.query.type;
+
+                const matches = await fetchMatches(endpoint, type);
+
+                const httpResponse = HttpResponse.get({ message: "Matches data successfully retrieved", data: matches });
+                res.status(200).json(httpResponse);
+            })
+        );
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+createMatchesRoute('/matches/live', 'live-scores');
+createMatchesRoute('/matches/recent', 'live-scores/recent-matches');
+createMatchesRoute('/matches/upcoming', 'live-scores/upcoming-matches');
+
+
+module.exports = route;
+
+
+
+================================================
+FILE: src/core/constants/index.js
+================================================
+
+
+
+================================================
+FILE: src/core/modules/getRoutes.js
+================================================
+const { green } = require('colorette');
+const fs = require('fs');
+const { capitalizeFirstLetter } = require('../utils/formatter');
+
+/**
+ * Get Controller from Route Path
+ * @param {string} controllerPath
+ * @param {string} filePath
+ */
+function _getController(controllerPath, filePath) {
+    if (fs.existsSync(controllerPath)) {
+        const msgType = green('routes');
+
+        const routeDir = green(filePath);
+        const message = `controller ${routeDir} registered`;
+
+        // require controller
+        require(controllerPath);
+    }
+}
+
+/**
+ * Get Routes
+ * @param {string} basePath
+ */
+const getRoutes = (basePath) => {
+    const checkJS = basePath.match('src');
+
+    if (checkJS) {
+        // loop main controller directory
+        fs.readdirSync(basePath).forEach((file) => {
+            const regexExt = /^.*\.(js)$/;
+            const matchFile = file.match(regexExt);
+
+            const controllerPath = `${basePath}/${file}`;
+            const controllerExist = fs.existsSync(controllerPath);
+
+            if (matchFile) {
+                const splitFilename = file.split('.');
+                const filename = capitalizeFirstLetter(splitFilename[0]);
+
+                _getController(controllerPath, filename);
+            }
+
+            if (!matchFile || !controllerExist) {
+                getRoutes(controllerPath);
+            }
+        });
+    }
+};
+
+module.exports = { getRoutes };
+
+
+
+================================================
+FILE: src/core/modules/httpHandle.js
+================================================
+const { blue, cyan, green } = require('colorette');
+const { env } = require('../../config/env');
+
+function httpHandle(server, port) {
+    /**
+     * Handle HTTP Error
+     * @param port
+     * @param error
+     */
+    const onError = (error) => {
+        if (error.syscall !== 'listen') {
+            throw new Error();
+        }
+
+        const bind = typeof port === 'string' ? `Pipe ${port}` : `Port ${port}`;
+
+        // handle specific listen errors with friendly messages
+        switch (error.code) {
+            case 'EACCES':
+                console.error(`${bind} requires elevated privileges`);
+                process.exit(1);
+                break;
+            case 'EADDRINUSE':
+                console.error(`${bind} is already in use`);
+                process.exit(1);
+                break;
+            default:
+                throw new Error();
+        }
+    };
+
+    /**
+     * On Listening HTTP
+     * @param server
+     */
+    const onListening = () => {
+        const addr = server.address();
+        const bind = typeof addr === 'string' ? `${addr}` : `${addr?.port}`;
+
+        const host = cyan(`http://localhost:${bind}`);
+        const nodeEnv = blue(env.NODE_ENV);
+
+        const msgType = green(`${env.APP_NAME}`);
+        const message = `server listening on ${host} ⚡️ & env: ${nodeEnv} 🚀`;
+    };
+
+    return { onError, onListening };
+}
+
+module.exports = { httpHandle };
+
+
+
+================================================
+FILE: src/core/response/errorResponse.js
+================================================
+class BaseError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.name = this.constructor.name;
+        this.statusCode = statusCode;
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+class NotFound extends BaseError {
+    constructor(message = "Not Found") {
+        super(message, 404);
+    }
+}
+
+class BadRequest extends BaseError {
+    constructor(message = "Bad Request") {
+        super(message, 400);
+    }
+}
+
+class Forbidden extends BaseError {
+    constructor(message = "Forbidden") {
+        super(message, 403);
+    }
+}
+
+class InternalServer extends BaseError {
+    constructor(message = "Internal Server Error") {
+        super(message, 500);
+    }
+}
+
+module.exports = { BaseError, BadRequest, Forbidden, InternalServer, NotFound };
+
+
+
+================================================
+FILE: src/core/response/httpResponse.js
+================================================
+
+class HttpResponse {
+
+    static baseResponse(dataResponse) {
+        const { message = 'Data has been received', code = 200, ...rest } = dataResponse;
+
+        return { code, message, ...rest };
+    }
+
+
+    static get(dataResponse) {
+        const message = "Data retrived successfully"
+        return this.baseResponse({ message, ...dataResponse });
+    }
+
+    static created(dataResponse) {
+        const message = "Data Created successfully"
+
+        return this.baseResponse({ code: 201, message, ...dataResponse });
+    }
+
+    static updated(dataResponse) {
+        const message = "Data updated successfully"
+        return this.baseResponse({ message, ...dataResponse });
+    }
+
+    static deleted(dataResponse) {
+        const message = "Data deleted successfully"
+        return this.baseResponse({ message, ...dataResponse });
+    }
+}
+
+module.exports = HttpResponse;
+
+
+
+================================================
+FILE: src/core/utils/formatter.js
+================================================
+function capitalizeFirstLetter(string) {
+    const regex = /[-`~!@#$%^&*_|=?;:'",<>]/gi;
+
+    const first_word = string.charAt(0).toUpperCase();
+    const new_word = `${first_word}${string.slice(1)?.split(regex)?.join(' ')}`;
+
+    const split_word = new_word.split(' ');
+
+    for (let i = 0; i < split_word.length; i += 1) {
+        const first_split_word = split_word[i].charAt(0).toUpperCase();
+        split_word[i] = `${first_split_word}${split_word[i].slice(1)}`;
+    }
+
+    const result = split_word.join(' ');
+
+    return result;
+}
+
+
+
+module.exports = {
+    capitalizeFirstLetter,
+};
+
+
+
+================================================
+FILE: src/middlewares/expressRateLimit.js
+================================================
+const { rateLimit } = require('express-rate-limit');
+const { env } = require("../config/env");
+const HttpResponse = require("../core/response/httpResponse");
+
+/**
+ * Express Rate Limit
+ * @returns
+ */
+const expressRateLimit = () => {
+    const delay = 60 * 1000;
+
+    return rateLimit({
+        windowMs: delay, // 15 minutes
+        max: env.RATE_LIMIT, // Limit each IP to 100 requests per `window`
+        handler: (
+            _req,
+            res,
+            _next,
+            options
+        ) => {
+            const httpResponse = HttpResponse.get({
+                code: options.statusCode,
+                message: options.message,
+            });
+
+            res.status(options.statusCode).json(httpResponse);
+        },
+    });
+};
+
+module.exports = { expressRateLimit };
+
+
+
+================================================
+FILE: src/middlewares/expressUserAgent.js
+================================================
+/**
+ * Express User Agent
+ * @returns
+ */
+const expressUserAgent = () => {
+    return function (req, _res, next) {
+        // check is user agent
+        const userAgentIs = (useragent) => {
+            const r = [];
+            for (const i in useragent) if (useragent[i] === true) r.push(i);
+            return r;
+        };
+
+        const userAgentState = {
+            browser: req.useragent?.browser,
+            version: req.useragent?.version,
+            os: req.useragent?.os,
+            platform: req.useragent?.platform,
+            geoIp: req.useragent?.geoIp,
+            source: req.useragent?.source,
+            is: userAgentIs(req.useragent),
+        };
+
+        req.body.userAgent = userAgentState;
+
+        next();
+    };
+};
+
+module.exports = { expressUserAgent };
+
+
+
+================================================
+FILE: src/routes/index.js
+================================================
+const express = require('express');
+const v1Routes = require('./v1');
+const HttpResponse = require('../core/response/httpResponse');
+const { env } = require('../config/env');
+
+const route = express.Router();
+
+route.get('/', function index(req, res) {
+    let responseData = {
+        message: 'CricBuzz Live API',
+        maintaner: 'ekamid, <ebrahimkha71@gmail.com>',
+        source: 'https://github.com/ekamid/cricbuzz-live',
+        docs: `${env.APP_BASE_URL}/v1/api-docs`,
+    };
+
+    const httpResponse = HttpResponse.get(responseData);
+    res.status(200).json(httpResponse);
+});
+
+route.get('/health', function serverHealth(req, res) {
+    const startUsage = process.cpuUsage();
+
+    const status = {
+        uptime: process.uptime(),
+        message: 'Ok',
+        timezone: 'ID',
+        date: new Date().toISOString(),
+        node: process.version,
+        memory: process.memoryUsage(),
+        platform: process.platform,
+        cpu_usage: process.cpuUsage(startUsage),
+    };
+
+    const httpResponse = HttpResponse.get({
+        message: 'Server Uptime',
+        data: status,
+    });
+    res.status(200).json(httpResponse);
+});
+
+route.get('/v1', function (req, res) {
+    const method = req.method;
+    const url = req.originalUrl;
+    const host = req.hostname;
+
+    const endpoint = `${host}${url}`;
+
+    res.status(403).json({
+        error: {
+            message: `Forbidden, wrong access method ${method} endpoint: ${endpoint}`,
+        },
+    });
+});
+
+route.use('/v1', v1Routes);
+
+module.exports = route;
+
+
+
+================================================
+FILE: src/routes/v1.js
+================================================
+const express = require('express');
+const path = require('path');
+const { getRoutes } = require('../core/modules/getRoutes');
+
+const route = express.Router();
+
+const baseRoutes = path.resolve(`${__dirname}/../controllers`);
+
+module.exports = route;
+
+// Mapping Route
+getRoutes(baseRoutes);
+
+
+
+================================================
+FILE: src/services/fetchMatchData.js
+================================================
+const cheerio = require('cheerio');
+const axios = require('axios');
+
+const { InternalServer } = require('../core/response/errorResponse');
+const CRICBUZZ_URL = "https://www.cricbuzz.com"
+
+const fetchScore = async (matchId) => {
+    try {
+        const response = await axios.get(`${CRICBUZZ_URL}/live-cricket-scores/${matchId}`);
+        const $ = cheerio.load(response.data);
+
+        const update = $('.cb-col.cb-col-100.cb-min-stts.cb-text-complete').text().trim() || 'Match Stats will Update Soon';
+        const process = $('.cb-text-inprogress').text().trim() || 'Match Stats will Update Soon';
+        const noresult = $('.cb-col.cb-col-100.cb-font-18.cb-toss-sts.cb-text-abandon').text().trim() || 'Match Stats will Update Soon';
+        const stumps = $('.cb-text-stumps').text().trim() || 'Match Stats will Update Soon';
+        const lunch = $('.cb-text-lunch').text().trim() || 'Match Stats will Update Soon';
+        const inningsbreak = $('.cb-text-inningsbreak').text().trim() || 'Match Stats will Update Soon';
+        const tea = $('.cb-text-tea').text().trim() || 'Match Stats will Update Soon';
+        const rain_break = $('.cb-text-rain').text().trim() || 'Match Stats will Update Soon';
+        const wet_outfield = $('.cb-text-wetoutfield').text().trim() || 'Match Stats will Update Soon';
+
+        return {
+            'title': $('.cb-nav-hdr.cb-font-18.line-ht24').text().trim().replace(', Commentary', ''),
+            'update': update !== 'Match Stats will Update Soon' ? update : process || noresult || stumps || lunch || inningsbreak || tea || rain_break || wet_outfield || 'Match Stats will Update Soon...',
+            'liveScore': $('.cb-font-20.text-bold').text().trim(),
+            'runRate': $('.cb-font-12.cb-text-gray').first().text().trim().replace('CRR:\u00a0', ''),
+            'batsmanOne': $('.cb-col.cb-col-50').eq(1).text().trim(),
+            'batsmanOneRun': $('.cb-col.cb-col-10.ab.text-right').eq(0).text().trim(),
+            'batsmanOneBall': '(' + $('.cb-col.cb-col-10.ab.text-right').eq(1).text().trim() + ')',
+            'batsmanOneSR': $('.cb-col.cb-col-14.ab.text-right').eq(0).text().trim(),
+            'batsmanTwo': $('.cb-col.cb-col-50').eq(2).text().trim(),
+            'batsmanTwoRun': $('.cb-col.cb-col-10.ab.text-right').eq(2).text().trim(),
+            'batsmanTwoBall': '(' + $('.cb-col.cb-col-10.ab.text-right').eq(3).text().trim() + ')',
+            'batsmanTwoSR': $('.cb-col.cb-col-14.ab.text-right').eq(1).text().trim(),
+            'bowlerOne': $('.cb-col.cb-col-50').eq(4).text().trim(),
+            'bowlerOneOver': $('.cb-col.cb-col-10.text-right').eq(4).text().trim(),
+            'bowlerOneRun': $('.cb-col.cb-col-10.text-right').eq(5).text().trim(),
+            'bowlerOneWickets': $('.cb-col.cb-col-8.text-right').eq(5).text().trim(),
+            'bowlerOneEconomy': $('.cb-col.cb-col-14.text-right').eq(2).text().trim(),
+            'bowlerTwo': $('.cb-col.cb-col-50').eq(5).text().trim(),
+            'bowlerTwoOver': $('.cb-col.cb-col-10.text-right').eq(6).text().trim(),
+            'bowlerTwoRun': $('.cb-col.cb-col-10.text-right').eq(7).text().trim(),
+            'bowlerTwoWicket': $('.cb-col.cb-col-8.text-right').eq(7).text().trim(),
+            'bowlerTwoEconomy': $('.cb-col.cb-col-14.text-right').eq(3).text().trim(),
+        }
+    } catch (e) {
+        throw new InternalServer("Something went wrong")
+    }
+}
+
+
+const fetchMatches = async (endpoint, origin = "international") => {
+    try {
+
+        const URL = `${CRICBUZZ_URL}/cricket-match/${endpoint}`
+
+        const response = await axios.get(URL);
+        const $ = cheerio.load(response.data, { xmlMode: true });
+
+        const matches = [];
+
+        // Iterate through each match element of the active match type
+        $(`.cb-plyr-tbody[ng-show="active_match_type == '${origin}-tab'"] .cb-col-100.cb-col`).each((index, matchElement) => {
+            // Extract match details
+            const titleElement = $(matchElement).find('.cb-lv-scr-mtch-hdr a');
+            const title = titleElement.text().trim();
+
+            // Check if titleElement has an href attribute
+            const hrefAttribute = titleElement.attr('href');
+            const matchId = hrefAttribute ? hrefAttribute.match(/\/(\d+)\//)[1] : null; // Extracting match ID from href if available
+
+
+            const teams = [];
+            $(matchElement).find('.cb-ovr-flo.cb-hmscg-tm-nm').each((i, teamElement) => {
+                const teamName = $(teamElement).text().trim();
+                const run = $(matchElement).find('.cb-ovr-flo').filter(':not(.cb-hmscg-tm-nm)').eq(i).text().trim();
+                const senitizeRun = run.split(teamName).join("")
+
+                const teamObject = {
+                    team: teamName,
+                    run: senitizeRun,
+                };
+
+                teams.push(teamObject);
+            });
+
+            const timeAndPlaceElement = $(matchElement).find('div.text-gray');
+            const date = timeAndPlaceElement.find('span').eq(0).text().trim();
+            const time = timeAndPlaceElement.find('span').eq(2).text().trim();
+            const place = timeAndPlaceElement.find('span.text-gray').text().trim();
+
+            const overViewIfLive = $(matchElement).find(".cb-text-live").text().trim();
+            const overViewIfComplete = $(matchElement).find(".cb-text-complete").text().trim();
+
+            // Create an object for the match
+            const matchObject = {
+                id: matchId,
+                title,
+                teams,
+                timeAndPlace: {
+                    date,
+                    time,
+                    place,
+                },
+                overview: overViewIfLive || overViewIfComplete
+            };
+
+
+
+            // Categorize matches based on type
+            if (matchId && title.length) {
+                const matchIdExist = matches.filter(match => match.id === matchId);
+                if (!matchIdExist.length) {
+                    matches.push(matchObject)
+                }
+            }
+        });
+
+
+        return {
+            matches
+        }
+    } catch (error) {
+        throw new InternalServer(error.message)
+    }
+}
+
+module.exports = {
+    fetchScore,
+    fetchMatches
+}
+
+
+================================================
+FILE: src/services/.gitkeep
+================================================
+
+
