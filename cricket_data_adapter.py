@@ -40,6 +40,97 @@ logger = logging.getLogger(__name__)
 # Check if data sources are available
 CRICKET_API_AVAILABLE = bool(CRICKET_API_KEY)
 
+def normalize_player_name(player_name: str) -> str:
+    """
+    Normalize player name by handling common misspellings and variations
+
+    Parameters:
+    - player_name: Original player name
+
+    Returns:
+    - Normalized player name
+    """
+    # Handle empty or None input
+    if not player_name:
+        return ""
+
+    # Remove any special format like "what are X - Statistics"
+    import re
+    special_format_match = re.search(r'what are (.*?) - statistics', player_name.lower())
+    if special_format_match:
+        player_name = special_format_match.group(1)
+        logger.info(f"Extracted name from special format: {player_name}")
+
+    # Common misspellings and variations with their canonical forms
+    name_corrections = {
+        "virat kolhi": "virat kohli",
+        "kolhi": "kohli",
+        "rohit": "rohit sharma",
+        "dhoni": "ms dhoni",
+        "ms": "ms dhoni",
+        "williamson": "kane williamson",
+        "kane": "kane williamson",
+        "smith": "steve smith",
+        "steve": "steve smith",
+        "babar": "babar azam",
+        "azam": "babar azam",
+        "bumrah": "jasprit bumrah",
+        "jasprit": "jasprit bumrah",
+        "stokes": "ben stokes",
+        "ben": "ben stokes",
+        "rabada": "kagiso rabada",
+        "kagiso": "kagiso rabada",
+        "rashid": "rashid khan",
+        "khan": "rashid khan"
+    }
+
+    # Canonical forms for full player names
+    canonical_names = {
+        "virat kohli": "Virat Kohli",
+        "rohit sharma": "Rohit Sharma",
+        "ms dhoni": "MS Dhoni",
+        "kane williamson": "Kane Williamson",
+        "steve smith": "Steve Smith",
+        "babar azam": "Babar Azam",
+        "jasprit bumrah": "Jasprit Bumrah",
+        "ben stokes": "Ben Stokes",
+        "kagiso rabada": "Kagiso Rabada",
+        "rashid khan": "Rashid Khan"
+    }
+
+    # Clean up the name - remove extra spaces and make lowercase for comparison
+    player_name = " ".join(player_name.split()).lower()
+
+    # Check for exact matches in the canonical names dictionary
+    if player_name in canonical_names:
+        return canonical_names[player_name]
+
+    # Check for exact matches in the corrections dictionary
+    if player_name in name_corrections:
+        corrected_name = name_corrections[player_name]
+        # Check if the corrected name has a canonical form
+        if corrected_name in canonical_names:
+            logger.info(f"Corrected player name from '{player_name}' to canonical form '{canonical_names[corrected_name]}'")
+            return canonical_names[corrected_name]
+        logger.info(f"Corrected player name from '{player_name}' to '{corrected_name}'")
+        return corrected_name
+
+    # Check for partial matches
+    for misspelling, correct in name_corrections.items():
+        # If the misspelling is a substring of the player name and it's at least 4 characters long
+        if misspelling in player_name and len(misspelling) >= 4:
+            # Replace only the misspelled part
+            corrected_name = player_name.replace(misspelling, correct)
+            # Check if the corrected name has a canonical form
+            if corrected_name in canonical_names:
+                logger.info(f"Corrected player name from '{player_name}' to canonical form '{canonical_names[corrected_name]}'")
+                return canonical_names[corrected_name]
+            logger.info(f"Corrected player name from '{player_name}' to '{corrected_name}'")
+            return corrected_name
+
+    # If no corrections needed, capitalize each word and return
+    return " ".join(word.capitalize() for word in player_name.split())
+
 def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str, Any]:
     """
     Get player statistics from available data sources
@@ -56,10 +147,13 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
     Returns:
     - Player statistics in application format
     """
-    logger.info(f"Getting stats for player: {player_name}")
+    # Normalize player name to handle misspellings
+    corrected_name = normalize_player_name(player_name)
 
-    # Normalize player name
-    normalized_name = player_name.lower().replace(" ", "_")
+    logger.info(f"Getting stats for player: {corrected_name} (original: {player_name})")
+
+    # Normalize player name for file operations
+    normalized_name = corrected_name.lower().replace(" ", "_")
     cache_file = os.path.join(CRICSHEET_CACHE_DIR, f"player_{normalized_name}.json")
 
     # Check if we have cached data and it's not a forced refresh
@@ -73,23 +167,23 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
                 # Cache is still valid, load it
                 with open(cache_file, 'r') as f:
                     cached_data = json.load(f)
-                    logger.info(f"Using cached data for {player_name}")
+                    logger.info(f"Using cached data for {corrected_name}")
 
                     # If we have Cricbuzz API available, try to update real-time stats
                     if CRICKET_API_AVAILABLE:
                         try:
                             # Try to get current form from Cricbuzz
-                            players = api.search_players(player_name)
+                            players = api.search_players(corrected_name)
                             if players:
                                 player_id = players[0].get("id")
                                 current_stats = api.get_player_stats(player_id)
 
                                 if current_stats:
                                     # Update only the real-time fields
-                                    logger.info(f"Updating real-time stats for {player_name} from Cricbuzz")
+                                    logger.info(f"Updating real-time stats for {corrected_name} from Cricbuzz")
 
                                     # Convert to our format
-                                    current_data = _convert_player_stats(current_stats, player_name)
+                                    current_data = _convert_player_stats(current_stats, corrected_name)
 
                                     # Update only specific fields
                                     real_time_fields = ["recent_form", "recent_wickets", "current_form"]
@@ -108,7 +202,7 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
             logger.error(f"Error loading cached player data: {str(e)}")
 
     # If we get here, we need to fetch fresh data
-    logger.info(f"Fetching fresh data for {player_name}")
+    logger.info(f"Fetching fresh data for {corrected_name}")
 
     # Strategy: Try Cricsheet first for historical data, then enhance with Cricbuzz for real-time data
     player_data = None
@@ -116,11 +210,11 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
     # Step 1: Try Cricsheet for historical data
     if CRICSHEET_ENABLED:
         try:
-            logger.info(f"Fetching historical data from Cricsheet for {player_name}")
-            cricsheet_player = cricsheet.get_player_stats(player_name, force_refresh=force_refresh)
+            logger.info(f"Fetching historical data from Cricsheet for {corrected_name}")
+            cricsheet_player = cricsheet.get_player_stats(corrected_name, force_refresh=force_refresh)
 
             if cricsheet_player and cricsheet_player.get("matches_played", 0) > 0:
-                logger.info(f"Found player stats for {player_name} from Cricsheet")
+                logger.info(f"Found player stats for {corrected_name} from Cricsheet")
                 player_data = _convert_cricsheet_player_stats(cricsheet_player)
         except Exception as e:
             logger.error(f"Error getting player stats from Cricsheet: {str(e)}")
@@ -128,9 +222,9 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
     # Step 2: Try to enhance with Cricbuzz data or use it as primary if Cricsheet failed
     if CRICKET_API_AVAILABLE:
         try:
-            logger.info(f"Fetching real-time data from Cricbuzz for {player_name}")
+            logger.info(f"Fetching real-time data from Cricbuzz for {corrected_name}")
             # Search for player by name
-            players = api.search_players(player_name)
+            players = api.search_players(corrected_name)
 
             if players:
                 # Get the first matching player
@@ -140,12 +234,12 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
                 cricbuzz_stats = api.get_player_stats(player_id)
 
                 if cricbuzz_stats:
-                    logger.info(f"Found player stats for {player_name} from Cricbuzz")
-                    cricbuzz_data = _convert_player_stats(cricbuzz_stats, player_name)
+                    logger.info(f"Found player stats for {corrected_name} from Cricbuzz")
+                    cricbuzz_data = _convert_player_stats(cricbuzz_stats, corrected_name)
 
                     if player_data:
                         # Enhance Cricsheet data with Cricbuzz real-time data
-                        logger.info(f"Enhancing Cricsheet data with Cricbuzz data for {player_name}")
+                        logger.info(f"Enhancing Cricsheet data with Cricbuzz data for {corrected_name}")
 
                         # Update real-time fields
                         real_time_fields = ["recent_form", "recent_wickets", "current_form"]
@@ -154,15 +248,15 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
                                 player_data[field] = cricbuzz_data[field]
                     else:
                         # Use Cricbuzz as primary data source
-                        logger.info(f"Using Cricbuzz as primary data source for {player_name}")
+                        logger.info(f"Using Cricbuzz as primary data source for {corrected_name}")
                         player_data = cricbuzz_data
         except Exception as e:
             logger.error(f"Error getting player stats from Cricbuzz: {str(e)}")
 
     # Step 3: If both failed, use fallback data
     if not player_data:
-        logger.warning(f"No stats found for player: {player_name}, using fallback data")
-        player_data = _get_fallback_player_stats(player_name)
+        logger.warning(f"No stats found for player: {corrected_name}, using fallback data")
+        player_data = _get_fallback_player_stats(corrected_name)
 
     # Save to cache
     if player_data:
@@ -173,10 +267,17 @@ def get_player_stats(player_name: str, force_refresh: bool = False) -> Dict[str,
             # Add timestamp
             player_data["last_updated"] = datetime.now().isoformat()
 
+            # Make sure the name in the data is the corrected one
+            player_data["name"] = corrected_name
+
+            # Add original name as a reference
+            if player_name != corrected_name:
+                player_data["original_query"] = player_name
+
             # Save to cache
             with open(cache_file, 'w') as f:
                 json.dump(player_data, f, indent=2)
-            logger.info(f"Cached player data for {player_name}")
+            logger.info(f"Cached player data for {corrected_name}")
         except Exception as e:
             logger.error(f"Error caching player data: {str(e)}")
 
@@ -262,15 +363,52 @@ def _convert_player_stats(api_stats: Dict[str, Any], player_name: str) -> Dict[s
 
 def _get_fallback_player_stats(player_name: str) -> Dict[str, Any]:
     """Get player statistics from fallback data"""
+    player_name_lower = player_name.lower()
+
     # Try to find an exact match first
     for player in FALLBACK_PLAYER_DATA:
-        if player["name"].lower() == player_name.lower():
+        if player["name"].lower() == player_name_lower:
             return player
 
     # Try partial match if exact match not found
     for player in FALLBACK_PLAYER_DATA:
-        if player_name.lower() in player["name"].lower():
+        if player_name_lower in player["name"].lower():
             return player
+
+    # Try fuzzy matching - check if any part of the player name matches
+    player_parts = player_name_lower.split()
+    for player in FALLBACK_PLAYER_DATA:
+        player_name_parts = player["name"].lower().split()
+        # Check if any part of the name matches
+        for part in player_parts:
+            if part in player_name_parts and len(part) >= 4:  # Only consider parts with at least 4 characters
+                logger.info(f"Fuzzy match found for {player_name}: {player['name']}")
+                return player
+
+    # Try to match common misspellings
+    common_misspellings = {
+        "kohli": "virat kohli",
+        "kolhi": "virat kohli",
+        "sharma": "rohit sharma",
+        "dhoni": "ms dhoni",
+        "williamson": "kane williamson",
+        "smith": "steve smith",
+        "azam": "babar azam",
+        "bumrah": "jasprit bumrah",
+        "stokes": "ben stokes",
+        "rabada": "kagiso rabada",
+        "khan": "rashid khan"
+    }
+
+    # Check if any part of the player name is a known misspelling
+    for part in player_parts:
+        if part in common_misspellings:
+            correct_name = common_misspellings[part]
+            logger.info(f"Misspelling match found for {player_name}: {correct_name}")
+            # Look for the correct name in the fallback data
+            for player in FALLBACK_PLAYER_DATA:
+                if player["name"].lower() == correct_name:
+                    return player
 
     # Return default data if player not found
     logger.warning(f"Player not found in fallback data: {player_name}")

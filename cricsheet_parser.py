@@ -506,9 +506,12 @@ class CricsheetParser:
         # This is a simplified version - in a real system, you'd have a database
         player_name_lower = player_name.lower()
 
-        # Known players dictionary
+        # Known players dictionary with common misspellings
         known_players = {
             "virat kohli": {"team": "India", "role": "Batsman", "price": 10.5, "ownership": 78.4},
+            "virat kolhi": {"team": "India", "role": "Batsman", "price": 10.5, "ownership": 78.4},  # Common misspelling
+            "kohli": {"team": "India", "role": "Batsman", "price": 10.5, "ownership": 78.4},
+            "kolhi": {"team": "India", "role": "Batsman", "price": 10.5, "ownership": 78.4},  # Common misspelling
             "rohit sharma": {"team": "India", "role": "Batsman", "price": 10.0, "ownership": 75.2},
             "jasprit bumrah": {"team": "India", "role": "Bowler", "price": 9.5, "ownership": 70.1},
             "ms dhoni": {"team": "India", "role": "Wicketkeeper", "price": 9.0, "ownership": 65.8},
@@ -528,6 +531,17 @@ class CricsheetParser:
         for known_name, info in known_players.items():
             if known_name in player_name_lower or player_name_lower in known_name:
                 return info
+
+        # Check for fuzzy matches (for misspellings)
+        for known_name, info in known_players.items():
+            # Check for common name parts (e.g., "virat" in "virat kolhi")
+            name_parts = player_name_lower.split()
+            known_parts = known_name.split()
+
+            # If any part matches and the names are similar length, consider it a match
+            for part in name_parts:
+                if part in known_parts and abs(len(player_name_lower) - len(known_name)) < 5:
+                    return info
 
         return {}
 
